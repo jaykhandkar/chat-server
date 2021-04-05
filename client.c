@@ -82,12 +82,12 @@ int main(int argc, char *argv[])
 		while (isspace(*(x = line++)))
 			;
 		if (strncmp(x, "write", 5) == 0){
-			send(sockfd, x+5, strlen(x+5), 0);
+			send(sockfd, x, strlen(x), 0);
 		}
 		else
 			usage();
 		//send(sockfd, line, strlen(line), 0);
 		printf(PROMPT);
 	}
-
+	free(line);
 }

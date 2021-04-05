@@ -12,10 +12,15 @@
 
 #define DEBUG 1
 
+#define WRITE	0xa
+#define PUT	0xb 
+#define GET	0xc
+#define LIST	0xd
+
 #define PROMPT "🗭 "
 
 #ifdef  DEBUG
-#define ERROR(X) perror(X);
+#define ERROR(X) perror(X)
 #else
 #define ERROR(X)
 #endif
