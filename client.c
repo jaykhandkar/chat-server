@@ -20,11 +20,13 @@ void *get_ipv4_or_ipv6(struct sockaddr *sa)
 
 int main(int argc, char *argv[])
 {
-	char buf[BUFSIZ];
+	char *line = NULL;
 	int sockfd, nbytes;
 	struct addrinfo hints, *servinfo, *p;
 	int rv;
 	char s[INET6_ADDRSTRLEN];
+	size_t len = 0;
+	ssize_t read;
 
 	if (argc != 2) {
 		printf("usage: client <hostname>\n");
@@ -66,12 +68,10 @@ int main(int argc, char *argv[])
 	if (!fork())
 		recv_loop(sockfd);
 
-	while (1) {
+	printf(">");
+	while ((read = getline(&line, &len, stdin)) > 0){
+		send(sockfd, line, strlen(line), 0);
 		printf(">");
-		while (fgets(buf, BUFSIZ, stdin)) {
-			send(sockfd, buf, strlen(buf), 0);
-			if (buf[strlen(buf) - 1] == '\n')
-				printf(">");
-		}
 	}
+
 }
