@@ -7,8 +7,16 @@ void recv_loop(int fd)
 
 	while ((n = recv(fd, buf, BUFSIZ, 0)) > 0){
 		write(1, buf, n);
-		write(1, ">", 1);
+		write(1, PROMPT, strlen(PROMPT));
 	}
+}
+
+void usage()
+{
+	printf("valid commands: write <text> - writes text to all other clients\n"
+	       "                put   <file> - puts file on the server\n"
+	       "	        get   <file> - retrieves file from the server\n"
+	       "	        list         - displays all files on the server\n");
 }
 
 void *get_ipv4_or_ipv6(struct sockaddr *sa)
@@ -23,6 +31,7 @@ int main(int argc, char *argv[])
 	char *line = NULL;
 	int sockfd, nbytes;
 	struct addrinfo hints, *servinfo, *p;
+	char *x;
 	int rv;
 	char s[INET6_ADDRSTRLEN];
 	size_t len = 0;
@@ -68,10 +77,17 @@ int main(int argc, char *argv[])
 	if (!fork())
 		recv_loop(sockfd);
 
-	printf(">");
+	printf(PROMPT);
 	while ((read = getline(&line, &len, stdin)) > 0){
-		send(sockfd, line, strlen(line), 0);
-		printf(">");
+		while (isspace(*(x = line++)))
+			;
+		if (strncmp(x, "write", 5) == 0){
+			send(sockfd, x+5, strlen(x+5), 0);
+		}
+		else
+			usage();
+		//send(sockfd, line, strlen(line), 0);
+		printf(PROMPT);
 	}
 
 }

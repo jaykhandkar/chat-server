@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -10,6 +11,8 @@
 #include <arpa/inet.h>
 
 #define DEBUG 1
+
+#define PROMPT "🗭 "
 
 #ifdef  DEBUG
 #define ERROR(X) perror(X);
