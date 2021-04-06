@@ -24,8 +24,29 @@ int readn(int fd, char *ptr, int nbytes)
 	return (nbytes - nleft);
 }
 
+void write_to_file (int sockfd, int fd, int len)
+{
+	int rem;
+	char buf[BUFSIZ];
+
+	if (len < BUFSIZ) {
+		readn(sockfd, buf, len);
+		write(fd, buf, len);
+	}
+	else {
+		rem = len % BUFSIZ;
+		for (int i = 0; i < (len / BUFSIZ); i++){
+			readn(sockfd, buf, BUFSIZ);
+			write(fd, buf, BUFSIZ);
+		}
+		readn(sockfd, buf, rem);
+		write(fd, buf, rem);
+	}
+}
+
 void handle_put(int sockfd)
 {
+	char buf[BUFSIZ];
 	struct rq rqbuf;
 	int fd;
 	int n;
@@ -36,7 +57,12 @@ void handle_put(int sockfd)
 		printf("%s\n", rqbuf.filename);
 		printf("%d\n", rqbuf.len);
 	}
-	//fd = open(rqbuf.filename, O_RDWR | O_CREAT, S_IRWXU);
+
+	fd = open(rqbuf.filename, O_RDWR | O_CREAT, S_IRWXU);
+	write_to_file(sockfd, fd, rqbuf.len);
+	//n = readn(sockfd, buf, rqbuf.len);
+	//write(fd, buf, rqbuf.len);
+	close(fd);
 }
 
 int main()

@@ -14,8 +14,13 @@ void recv_loop(int fd)
 void send_file(int sockfd, char *path)
 {
 	int fd;
+	char buf[BUFSIZ];
 	struct stat statbuf = {0};
 	struct rq rqbuf = {0};
+	int n;
+
+	while (isspace(*path))
+		path++;
 
 	path[strlen(path)-1] = 0;
 	fd = open(path, O_RDONLY);
@@ -41,6 +46,11 @@ void send_file(int sockfd, char *path)
 	rqbuf.len = statbuf.st_size;
 	strcpy(rqbuf.filename, basename(path));
 	send(sockfd, &rqbuf, sizeof rqbuf, 0);
+
+	while ((n = read(fd, buf, sizeof buf)) > 0)
+		send(sockfd, buf, n, 0);
+
+	close(fd);
 }
 
 void usage()
@@ -119,7 +129,7 @@ int main(int argc, char *argv[])
 		}
 		else if (strncmp(x, "put", 3) == 0) {
 			send(sockfd, x, strlen(x), 0);
-			send_file(sockfd, x + 4);
+			send_file(sockfd, x + 3);
 		}
 		else
 			usage();
