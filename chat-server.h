@@ -1,4 +1,8 @@
 #include <stdio.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <libgen.h>
+#include <limits.h>
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
@@ -17,6 +21,8 @@
 #define GET	0xc
 #define LIST	0xd
 
+#define MAGIC 0xfefefefe
+
 #define PROMPT "🗭 "
 
 #ifdef  DEBUG
@@ -26,3 +32,9 @@
 #endif
 
 #define PORT "9034"
+
+struct rq {
+	int magic;
+	off_t len;
+	char filename[PATH_MAX];
+};
