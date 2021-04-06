@@ -47,6 +47,7 @@ void send_file(int sockfd, char *path)
 	strcpy(rqbuf.filename, basename(path));
 	send(sockfd, &rqbuf, sizeof rqbuf, 0);
 
+	printf("sending file...\n");
 	while ((n = read(fd, buf, sizeof buf)) > 0)
 		send(sockfd, buf, n, 0);
 

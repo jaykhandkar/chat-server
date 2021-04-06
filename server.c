@@ -24,30 +24,33 @@ int readn(int fd, char *ptr, int nbytes)
 	return (nbytes - nleft);
 }
 
-void write_to_file (int sockfd, int fd, int len)
+int write_to_file (int sockfd, int fd, int len)
 {
 	int rem;
+	int tot = 0;
 	char buf[BUFSIZ];
 
 	if (len < BUFSIZ) {
-		readn(sockfd, buf, len);
+		tot = readn(sockfd, buf, len);
 		write(fd, buf, len);
 	}
 	else {
 		rem = len % BUFSIZ;
 		for (int i = 0; i < (len / BUFSIZ); i++){
-			readn(sockfd, buf, BUFSIZ);
+			tot += readn(sockfd, buf, BUFSIZ);
 			write(fd, buf, BUFSIZ);
 		}
-		readn(sockfd, buf, rem);
+		tot += readn(sockfd, buf, rem);
 		write(fd, buf, rem);
 	}
+	return tot;
 }
 
 void handle_put(int sockfd)
 {
 	char buf[BUFSIZ];
 	struct rq rqbuf;
+	int rv;
 	int fd;
 	int n;
 
@@ -59,7 +62,12 @@ void handle_put(int sockfd)
 	}
 
 	fd = open(rqbuf.filename, O_RDWR | O_CREAT, S_IRWXU);
-	write_to_file(sockfd, fd, rqbuf.len);
+	printf("receiving file...\n");
+	rv = write_to_file(sockfd, fd, rqbuf.len);
+	if (rv == rqbuf.len)
+		printf("all good!\n");
+	else
+		printf("sorry, an error occured\n");
 	//n = readn(sockfd, buf, rqbuf.len);
 	//write(fd, buf, rqbuf.len);
 	close(fd);
