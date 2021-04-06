@@ -1,11 +1,4 @@
-#include "chat-server.h"
-
-void *get_ipv4_or_ipv6(struct sockaddr *sa)
-{
-	if (sa->sa_family == AF_INET)
-		return &(((struct sockaddr_in*)sa)->sin_addr);
-	return &(((struct sockaddr_in6*)sa)->sin6_addr);
-}
+#include <chat-server.h>
 
 int readn(int fd, char *ptr, int nbytes)
 {
@@ -64,10 +57,13 @@ void handle_put(int sockfd)
 	fd = open(rqbuf.filename, O_RDWR | O_CREAT, S_IRWXU);
 	printf("receiving file...\n");
 	rv = write_to_file(sockfd, fd, rqbuf.len);
-	if (rv == rqbuf.len)
+	if (rv == rqbuf.len){
 		printf("all good!\n");
-	else
+	}
+	else{
 		printf("sorry, an error occured\n");
+		unlink(rqbuf.filename);
+	}
 	//n = readn(sockfd, buf, rqbuf.len);
 	//write(fd, buf, rqbuf.len);
 	close(fd);

@@ -33,6 +33,8 @@
 
 #define PORT "9034"
 
+void *get_ipv4_or_ipv6(struct sockaddr *);
+
 struct rq {
 	int magic;
 	off_t len;

@@ -1,4 +1,4 @@
-#include "chat-server.h"
+#include <chat-server.h>
 
 void recv_loop(int fd)
 {
@@ -60,13 +60,6 @@ void usage()
 	       "                put   <file> - puts file on the server\n"
 	       "	        get   <file> - retrieves file from the server\n"
 	       "	        list         - displays all files on the server\n");
-}
-
-void *get_ipv4_or_ipv6(struct sockaddr *sa)
-{
-	if (sa->sa_family == AF_INET)
-		return &(((struct sockaddr_in*)sa)->sin_addr);
-	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
 int main(int argc, char *argv[])
