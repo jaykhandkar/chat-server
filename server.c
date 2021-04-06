@@ -7,6 +7,72 @@ void *get_ipv4_or_ipv6(struct sockaddr *sa)
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
+int readn(int fd, char *ptr, int nbytes)
+{
+	int nread, nleft;
+
+	nleft = nbytes;
+	while (nleft > 0) {
+		nread = recv(fd, ptr, nleft, 0);
+		if (nread < 0)
+			return nread;
+		else if (nread == 0)
+			break;
+		nleft -= nread;
+		ptr += nread;
+	}
+	return (nbytes - nleft);
+}
+
+int write_to_file (int sockfd, int fd, int len)
+{
+	int rem;
+	int tot = 0;
+	char buf[BUFSIZ];
+
+	if (len < BUFSIZ) {
+		tot = readn(sockfd, buf, len);
+		write(fd, buf, len);
+	}
+	else {
+		rem = len % BUFSIZ;
+		for (int i = 0; i < (len / BUFSIZ); i++){
+			tot += readn(sockfd, buf, BUFSIZ);
+			write(fd, buf, BUFSIZ);
+		}
+		tot += readn(sockfd, buf, rem);
+		write(fd, buf, rem);
+	}
+	return tot;
+}
+
+void handle_put(int sockfd)
+{
+	char buf[BUFSIZ];
+	struct rq rqbuf;
+	int rv;
+	int fd;
+	int n;
+
+	n = readn(sockfd, (char *)&rqbuf, sizeof rqbuf);
+	if (rqbuf.magic == MAGIC) {
+		printf("read %d bytes\n", n);
+		printf("%s\n", rqbuf.filename);
+		printf("%d\n", rqbuf.len);
+	}
+
+	fd = open(rqbuf.filename, O_RDWR | O_CREAT, S_IRWXU);
+	printf("receiving file...\n");
+	rv = write_to_file(sockfd, fd, rqbuf.len);
+	if (rv == rqbuf.len)
+		printf("all good!\n");
+	else
+		printf("sorry, an error occured\n");
+	//n = readn(sockfd, buf, rqbuf.len);
+	//write(fd, buf, rqbuf.len);
+	close(fd);
+}
+
 int main()
 {
 	int skip;
@@ -119,8 +185,15 @@ int main()
 											ERROR("send");
 							}
 							skip = 0;
-							if (buf[n-1] == '\n')
+							if (buf[n-1] == '\n'){
+								memset(buf, 0, sizeof buf);
 								cmd = 0;
+							}
+						}
+						if (cmd == PUT) {
+							cmd = 0;
+							handle_put(i);
+							memset(buf, 0, sizeof buf);
 						}
 					}
 				}

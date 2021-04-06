@@ -11,6 +11,49 @@ void recv_loop(int fd)
 	}
 }
 
+void send_file(int sockfd, char *path)
+{
+	int fd;
+	char buf[BUFSIZ];
+	struct stat statbuf = {0};
+	struct rq rqbuf = {0};
+	int n;
+
+	while (isspace(*path))
+		path++;
+
+	path[strlen(path)-1] = 0;
+	fd = open(path, O_RDONLY);
+	if (fd < 0) {
+		perror("open");
+		send(sockfd, &rqbuf, sizeof rqbuf, 0);
+		return;
+	}
+
+	if (fstat(fd, &statbuf) < 0) {
+		perror("fstat");
+		send(sockfd, &rqbuf, sizeof rqbuf, 0);
+		return;
+	}
+
+	if (!S_ISREG(statbuf.st_mode)) {
+		printf("please enter a regular file\n");
+		send(sockfd, &rqbuf, sizeof rqbuf, 0);
+		return;
+	}
+
+	rqbuf.magic = MAGIC;
+	rqbuf.len = statbuf.st_size;
+	strcpy(rqbuf.filename, basename(path));
+	send(sockfd, &rqbuf, sizeof rqbuf, 0);
+
+	printf("sending file...\n");
+	while ((n = read(fd, buf, sizeof buf)) > 0)
+		send(sockfd, buf, n, 0);
+
+	close(fd);
+}
+
 void usage()
 {
 	printf("valid commands: write <text> - writes text to all other clients\n"
@@ -79,10 +122,15 @@ int main(int argc, char *argv[])
 
 	printf(PROMPT);
 	while ((read = getline(&line, &len, stdin)) > 0){
-		while (isspace(*(x = line++)))
-			;
+		x = line;
+		while (isspace(*x ))
+			x++;
 		if (strncmp(x, "write", 5) == 0){
 			send(sockfd, x, strlen(x), 0);
+		}
+		else if (strncmp(x, "put", 3) == 0) {
+			send(sockfd, x, strlen(x), 0);
+			send_file(sockfd, x + 3);
 		}
 		else
 			usage();
