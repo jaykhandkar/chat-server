@@ -6,10 +6,10 @@ DEPS = chat-server.h
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 server: server.o utils.o
-	$(CC) -o $@ $^ $(CCFLAGS)
+	$(CC) -o $@ $^ $(CFLAGS)
 
 client: client.o utils.o
-	$(CC) -o $@ $^ $(CCFLAGS)
+	$(CC) -o $@ $^ $(CFLAGS)
 
 clean:
 	rm -f *.o server client
