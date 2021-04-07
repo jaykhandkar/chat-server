@@ -65,7 +65,7 @@ void usage()
 int main(int argc, char *argv[])
 {
 	char *line = NULL;
-	int sockfd, nbytes;
+	int sockfd;
 	struct addrinfo hints, *servinfo, *p;
 	char *x;
 	int rv;

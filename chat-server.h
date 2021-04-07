@@ -36,7 +36,7 @@
 void *get_ipv4_or_ipv6(struct sockaddr *);
 
 struct rq {
-	int magic;
+	unsigned int magic;
 	off_t len;
 	char filename[PATH_MAX];
 };

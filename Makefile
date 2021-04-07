@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -I.
+CFLAGS = -I. -Wall -Wextra
 DEPS = chat-server.h
 
 %.o: %.c $(DEPS)

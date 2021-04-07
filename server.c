@@ -41,7 +41,6 @@ int write_to_file (int sockfd, int fd, int len)
 
 void handle_put(int sockfd)
 {
-	char buf[BUFSIZ];
 	struct rq rqbuf;
 	int rv;
 	int fd;
@@ -49,9 +48,9 @@ void handle_put(int sockfd)
 
 	n = readn(sockfd, (char *)&rqbuf, sizeof rqbuf);
 	if (rqbuf.magic == MAGIC) {
-		printf("read %d bytes\n", n);
-		printf("%s\n", rqbuf.filename);
-		printf("%d\n", rqbuf.len);
+		printf("received rq struct of %d bytes\n", n);
+		printf("attempting to retrieve file %s\n", rqbuf.filename);
+		printf("file size = %ld\n", rqbuf.len);
 	}
 
 	fd = open(rqbuf.filename, O_RDWR | O_CREAT, S_IRWXU);
