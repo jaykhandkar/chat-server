@@ -42,6 +42,7 @@ int write_to_file (int sockfd, int fd, int len)
 void handle_put(int sockfd)
 {
 	struct rq rqbuf;
+	struct rq zero = {0};
 	int rv;
 	int fd;
 	int n;
@@ -56,7 +57,7 @@ void handle_put(int sockfd)
 	fd = open(rqbuf.filename, O_RDWR | O_CREAT, S_IRWXU);
 	printf("receiving file...\n");
 	rv = write_to_file(sockfd, fd, rqbuf.len);
-	if (rv == rqbuf.len){
+	if (rv == rqbuf.len && memcmp(&rqbuf, &zero, sizeof(struct rq)) != 0){
 		printf("all good!\n");
 	}
 	else{
