@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <signal.h>
 #include <dirent.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -42,6 +43,8 @@
 #define PORT "9034"
 
 void *get_ipv4_or_ipv6(struct sockaddr *);
+int write_to_file(int, int, int);
+int readn(int, char *, int);
 
 struct rq {
 	unsigned int magic;

@@ -1,22 +1,5 @@
 #include <chat-server.h>
 
-int readn(int fd, char *ptr, int nbytes)
-{
-	int nread, nleft;
-
-	nleft = nbytes;
-	while (nleft > 0) {
-		nread = recv(fd, ptr, nleft, 0);
-		if (nread < 0)
-			return nread;
-		else if (nread == 0)
-			break;
-		nleft -= nread;
-		ptr += nread;
-	}
-	return (nbytes - nleft);
-}
-
 void list_files(int sockfd)
 {
 	DIR *dirp = opendir(SERVDIR);
@@ -29,28 +12,6 @@ void list_files(int sockfd)
 		}
 	send(sockfd, PROMPT, strlen(PROMPT), 0);
 	closedir(dirp);
-}
-
-int write_to_file (int sockfd, int fd, int len)
-{
-	int rem;
-	int tot = 0;
-	char buf[BUFSIZ];
-
-	if (len < BUFSIZ) {
-		tot = readn(sockfd, buf, len);
-		write(fd, buf, len);
-	}
-	else {
-		rem = len % BUFSIZ;
-		for (int i = 0; i < (len / BUFSIZ); i++){
-			tot += readn(sockfd, buf, BUFSIZ);
-			write(fd, buf, BUFSIZ);
-		}
-		tot += readn(sockfd, buf, rem);
-		write(fd, buf, rem);
-	}
-	return tot;
 }
 
 void handle_put(int sockfd)
@@ -84,6 +45,44 @@ void handle_put(int sockfd)
 	//n = readn(sockfd, buf, rqbuf.len);
 	//write(fd, buf, rqbuf.len);
 	close(fd);
+}
+
+void handle_get(int sockfd, char *file)
+{
+	int fd, n;
+	char buf[BUFSIZ];
+	char pathbuf[PATH_MAX];
+	struct rq rqbuf = {0};
+	struct stat statbuf;
+	char *x;
+
+	file[strlen(file)-1] = 0;
+
+	x = file;
+	while (isspace(*x))
+		++x;
+
+	strcpy(pathbuf, SERVDIR);
+
+	fd = open(strcat(pathbuf, x), O_RDONLY);
+	if (fd < 0){
+		send(sockfd, &rqbuf, sizeof rqbuf, 0);
+		perror("open");
+		return;
+	}
+
+	if (fstat(fd, &statbuf) < 0) {
+		perror("fstat");
+		send(sockfd, &rqbuf, sizeof rqbuf, 0);
+		return;
+	}
+	rqbuf.magic = MAGIC;
+	rqbuf.len = statbuf.st_size;
+	strcpy(rqbuf.filename, x);
+	send(sockfd, &rqbuf, sizeof rqbuf, 0);
+
+	while ((n = read(fd, buf, sizeof buf)) > 0)
+		send(sockfd, buf, n, 0);
 }
 
 int main()
@@ -191,6 +190,8 @@ int main()
 								cmd = PUT;
 							else if (strncmp(buf, "list", 4) == 0)
 								cmd = LIST;
+							else if (strncmp(buf, "get", 3) == 0)
+								cmd = GET;
 						}
 						if (cmd == WRITE) {
 							for (j = 0; j <= maxfd; j++) {
@@ -216,6 +217,11 @@ int main()
 						if (cmd == LIST){
 							cmd = 0;
 							list_files(i);
+						}
+						if (cmd == GET){
+							cmd = 0;
+							handle_get(i, buf + 3);
+							memset(buf, 0, sizeof buf);
 						}
 					}
 				}

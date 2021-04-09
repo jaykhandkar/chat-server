@@ -52,6 +52,32 @@ void send_file(int sockfd, char *path)
 	close(fd);
 }
 
+void get_file(int sockfd)
+{
+	struct rq rqbuf;
+	int fd, rv;
+	
+	readn(sockfd, (char *)&rqbuf, sizeof rqbuf);
+	if (rqbuf.magic != MAGIC){
+		printf("sorry, an error occured\n");
+		return;
+	}
+
+	fd = open(rqbuf.filename, O_RDWR | O_CREAT, S_IRWXU);
+	printf("receiving file...\n");
+	rv = write_to_file(sockfd, fd, rqbuf.len);
+
+	if (rv == rqbuf.len){
+		printf("all good\n");
+	}
+	else {
+		printf("sorry, an error occured\n");
+		unlink(rqbuf.filename);
+	}
+
+	close(fd);
+}
+
 void usage()
 {
 	printf("valid commands: write <text> - writes text to all other clients\n"
@@ -63,6 +89,7 @@ void usage()
 int main(int argc, char *argv[])
 {
 	char *line = NULL;
+	int pid;
 	int sockfd;
 	struct addrinfo hints, *servinfo, *p;
 	char *x;
@@ -108,7 +135,7 @@ int main(int argc, char *argv[])
 
 	freeaddrinfo(servinfo);
 
-	if (!fork())
+	if (!(pid = fork()))
 		recv_loop(sockfd);
 	
 	printf(PROMPT);
@@ -125,6 +152,13 @@ int main(int argc, char *argv[])
 		}
 		else if (strncmp(x, "list", 4) == 0) {
 			send(sockfd, x, strlen(x), 0);
+		}
+		else if (strncmp(x, "get", 3) == 0) {
+			kill(pid, SIGKILL);
+			send(sockfd, x, strlen(x), 0);
+			get_file(sockfd);
+			if (!(pid = fork()))
+				recv_loop(sockfd);
 		}
 		else
 			usage();
