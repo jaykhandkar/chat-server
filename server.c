@@ -195,9 +195,12 @@ int main()
 						if (cmd == WRITE) {
 							for (j = 0; j <= maxfd; j++) {
 								if (FD_ISSET(j, &master))
-									if (j != listener && j != i)
+									if (j != listener && j != i){
 										if (send(j, buf + skip, n-skip, 0) < 0)
 											ERROR("send");
+										if (buf[n-1] == '\n')
+											send(j, PROMPT, strlen(PROMPT), 0);
+									}
 							}
 							skip = 0;
 							if (buf[n-1] == '\n'){

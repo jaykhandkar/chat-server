@@ -20,6 +20,7 @@
 #define BUFSIZ (PATH_MAX + 5)
 #endif
 
+/* this is the directory where the server will store files put up by clients */
 #define SERVDIR "/home/jay/.cache/server/"
 #define DEBUG 1
 
