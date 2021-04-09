@@ -7,7 +7,6 @@ void recv_loop(int fd)
 
 	while ((n = recv(fd, buf, BUFSIZ, 0)) > 0)
 		write(1, buf, n);
-	write(1, PROMPT, strlen(PROMPT));
 }
 
 void send_file(int sockfd, char *path)
@@ -111,7 +110,7 @@ int main(int argc, char *argv[])
 
 	if (!fork())
 		recv_loop(sockfd);
-
+	
 	printf(PROMPT);
 	while ((read = getline(&line, &len, stdin)) > 0){
 		x = line;
@@ -123,6 +122,9 @@ int main(int argc, char *argv[])
 		else if (strncmp(x, "put", 3) == 0) {
 			send(sockfd, x, strlen(x), 0);
 			send_file(sockfd, x + 3);
+		}
+		else if (strncmp(x, "list", 4) == 0) {
+			send(sockfd, x, strlen(x), 0);
 		}
 		else
 			usage();

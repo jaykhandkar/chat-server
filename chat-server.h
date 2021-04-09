@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <dirent.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <libgen.h>
@@ -19,7 +20,7 @@
 #define BUFSIZ (PATH_MAX + 5)
 #endif
 
-
+#define SERVDIR "/home/jay/.cache/server/"
 #define DEBUG 1
 
 #define WRITE	0xa
