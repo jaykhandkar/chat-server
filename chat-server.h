@@ -14,6 +14,12 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
+#if BUFSIZ < (PATH_MAX + 5)
+#undef BUFSIZ
+#define BUFSIZ (PATH_MAX + 5)
+#endif
+
+
 #define DEBUG 1
 
 #define WRITE	0xa

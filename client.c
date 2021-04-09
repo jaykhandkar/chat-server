@@ -5,10 +5,9 @@ void recv_loop(int fd)
 	char buf[BUFSIZ];
 	int n;
 
-	while ((n = recv(fd, buf, BUFSIZ, 0)) > 0){
+	while ((n = recv(fd, buf, BUFSIZ, 0)) > 0)
 		write(1, buf, n);
-		write(1, PROMPT, strlen(PROMPT));
-	}
+	write(1, PROMPT, strlen(PROMPT));
 }
 
 void send_file(int sockfd, char *path)
