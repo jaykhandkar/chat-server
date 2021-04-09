@@ -17,6 +17,20 @@ int readn(int fd, char *ptr, int nbytes)
 	return (nbytes - nleft);
 }
 
+void list_files(int sockfd)
+{
+	DIR *dirp = opendir(SERVDIR);
+	struct dirent *entry;
+
+	while ((entry = readdir(dirp)) != NULL)
+		if (strcmp(entry->d_name, ".") && strcmp(entry->d_name, "..")){
+				send(sockfd, entry->d_name, strlen(entry->d_name), 0);
+				send(sockfd, "\n", 1, 0);
+		}
+	send(sockfd, PROMPT, strlen(PROMPT), 0);
+	closedir(dirp);
+}
+
 int write_to_file (int sockfd, int fd, int len)
 {
 	int rem;
@@ -41,23 +55,26 @@ int write_to_file (int sockfd, int fd, int len)
 
 void handle_put(int sockfd)
 {
-	char buf[BUFSIZ];
 	struct rq rqbuf;
+	struct rq zero = {0};
 	int rv;
 	int fd;
 	int n;
+	char buf[PATH_MAX];
+
+	strcpy(buf, SERVDIR);
 
 	n = readn(sockfd, (char *)&rqbuf, sizeof rqbuf);
 	if (rqbuf.magic == MAGIC) {
-		printf("read %d bytes\n", n);
-		printf("%s\n", rqbuf.filename);
-		printf("%d\n", rqbuf.len);
+		printf("received rq struct of %d bytes\n", n);
+		printf("attempting to retrieve file %s\n", rqbuf.filename);
+		printf("file size = %ld\n", rqbuf.len);
 	}
 
-	fd = open(rqbuf.filename, O_RDWR | O_CREAT, S_IRWXU);
+	fd = open(strcat(buf, rqbuf.filename), O_RDWR | O_CREAT, S_IRWXU);
 	printf("receiving file...\n");
 	rv = write_to_file(sockfd, fd, rqbuf.len);
-	if (rv == rqbuf.len){
+	if (rv == rqbuf.len && memcmp(&rqbuf, &zero, sizeof(struct rq)) != 0){
 		printf("all good!\n");
 	}
 	else{
@@ -172,13 +189,18 @@ int main()
 							}
 							else if (strncmp(buf, "put", 3) == 0)
 								cmd = PUT;
+							else if (strncmp(buf, "list", 4) == 0)
+								cmd = LIST;
 						}
 						if (cmd == WRITE) {
 							for (j = 0; j <= maxfd; j++) {
 								if (FD_ISSET(j, &master))
-									if (j != listener && j != i)
+									if (j != listener && j != i){
 										if (send(j, buf + skip, n-skip, 0) < 0)
 											ERROR("send");
+										if (buf[n-1] == '\n')
+											send(j, PROMPT, strlen(PROMPT), 0);
+									}
 							}
 							skip = 0;
 							if (buf[n-1] == '\n'){
@@ -190,6 +212,10 @@ int main()
 							cmd = 0;
 							handle_put(i);
 							memset(buf, 0, sizeof buf);
+						}
+						if (cmd == LIST){
+							cmd = 0;
+							list_files(i);
 						}
 					}
 				}

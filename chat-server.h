@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <dirent.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <libgen.h>
@@ -14,6 +15,13 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
+#if BUFSIZ < (PATH_MAX + 5)
+#undef BUFSIZ
+#define BUFSIZ (PATH_MAX + 5)
+#endif
+
+/* this is the directory where the server will store files put up by clients */
+#define SERVDIR "/home/jay/.cache/server/"
 #define DEBUG 1
 
 #define WRITE	0xa
@@ -36,7 +44,7 @@
 void *get_ipv4_or_ipv6(struct sockaddr *);
 
 struct rq {
-	int magic;
+	unsigned int magic;
 	off_t len;
 	char filename[PATH_MAX];
 };
