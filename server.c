@@ -116,7 +116,6 @@ void *thread_handler(void *arg)
 			if (strncmp(buf, "write", 5) == 0){
 				cmd = WRITE;
 				skip = 5;
-				printf("here n = %d\n", n);
 			}
 			else if (strncmp(buf, "list", 4) == 0)
 				cmd = LIST;
@@ -127,8 +126,11 @@ void *thread_handler(void *arg)
 		}
 		if (cmd == WRITE) {
 			for (int i = 0; i <= clients.maxfd; i++){
-				if (i != fd && FD_ISSET(i, &clients.fds))
+				if (i != fd && FD_ISSET(i, &clients.fds)) {
 					write(i, buf + skip, n - skip);
+					if (buf[n-1] == '\n')
+						write(i, PROMPT, strlen(PROMPT));
+				}
 			}
 			skip = 0;
 			if (buf[n-1] == '\n')
