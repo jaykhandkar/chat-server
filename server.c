@@ -1,5 +1,7 @@
 #include <chat-server.h>
 
+struct cli_fds clients;
+
 void list_files(int sockfd)
 {
 	DIR *dirp = opendir(SERVDIR);
@@ -85,12 +87,75 @@ void handle_get(int sockfd, char *file)
 		send(sockfd, buf, n, 0);
 }
 
+void *thread_handler(void *arg)
+{
+	int fd = (int) arg;
+	int n;
+	int skip;
+	int cmd = 0;
+	char buf[BUFSIZ];
+
+	pthread_mutex_lock(&clients.f_lock);
+	FD_SET(fd, &clients.fds);
+	pthread_mutex_unlock(&clients.f_lock);
+
+	printf("socket: %d\n", fd);
+
+	for ( ; ; ) {
+		n = read(fd, buf, BUFSIZ);
+
+		if (n == 0) {
+			printf("socket %d hung up\n", fd);
+			pthread_mutex_lock(&clients.f_lock);
+			FD_CLR(fd, &clients.fds);
+			pthread_mutex_unlock(&clients.f_lock);
+			return (void *)0;
+		}
+
+		if (cmd == 0) {
+			if (strncmp(buf, "write", 5) == 0){
+				cmd = WRITE;
+				skip = 5;
+				printf("here n = %d\n", n);
+			}
+			else if (strncmp(buf, "list", 4) == 0)
+				cmd = LIST;
+			else if (strncmp(buf, "put", 3) == 0)
+				cmd = PUT;
+			else if (strncmp(buf, "get", 3) == 0)
+				cmd = GET;
+		}
+		if (cmd == WRITE) {
+			for (int i = 0; i <= clients.maxfd; i++){
+				if (i != fd && FD_ISSET(i, &clients.fds))
+					write(i, buf + skip, n - skip);
+			}
+			skip = 0;
+			if (buf[n-1] == '\n')
+				cmd = 0;
+		}
+		if (cmd == LIST){
+			cmd = 0;
+			list_files(fd);
+		}
+		if (cmd == GET){
+			cmd = 0;
+			handle_get(fd, buf + 3);
+			memset(buf, 0, sizeof buf);
+		}
+		if (cmd == PUT) {
+			cmd = 0;
+			handle_put(fd);
+			memset(buf, 0, sizeof buf);
+		}
+
+	}
+	return (void *)0;
+}
+
 int main()
 {
-	int skip;
-	int maxfd;
-	fd_set master, readfds;
-	int cmd = 0; /* command being processed */
+	pthread_t tid;
 
 	int listener;
 	int fd;
@@ -98,14 +163,18 @@ int main()
 	struct addrinfo hints, *ai, *p;
 	socklen_t len;
 
-	char buf[BUFSIZ];
 	char remote[INET6_ADDRSTRLEN];
-	int n;
-	int yes = 1, i, j, rv;
+	int yes = 1, rv;
 
-	FD_ZERO(&master);
-	FD_ZERO(&readfds);
-	
+	if (pthread_mutex_init(&clients.f_lock, NULL) != 0) {
+		printf("failed to initialise mutex\n");
+		exit(1);
+	}
+
+	pthread_mutex_lock(&clients.f_lock);
+	clients.maxfd = 0;
+	pthread_mutex_unlock(&clients.f_lock);
+
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
@@ -143,89 +212,22 @@ int main()
 		exit(1);
 	}
 
-	FD_SET(listener, &master);
-	maxfd = listener;
-
 	while (1) {
-		readfds = master;
-		if (select(maxfd + 1, &readfds, NULL, NULL, NULL) < 0){
-			perror("select");
-			exit(1);
-		}
+		fd = accept(listener, (struct sockaddr*) &cliaddr, &len);
+		printf("server: new connection from %s\n", inet_ntop(cliaddr.ss_family,
+					get_ipv4_or_ipv6((struct sockaddr *)&cliaddr),
+					remote, INET6_ADDRSTRLEN));
+		
+		pthread_mutex_lock(&clients.f_lock);
+		if (fd > clients.maxfd)
+			clients.maxfd = fd;
+		pthread_mutex_unlock(&clients.f_lock);
 
-		for (i = 0; i <= maxfd; i++) {
-			if (FD_ISSET(i, &readfds)){
-				if (i == listener) {
-					len = sizeof cliaddr;
-					fd = accept(listener, (struct sockaddr*)&cliaddr, &len);
-					if (fd < 0){
-						ERROR("accept");
-					}
-					else {
-						FD_SET(fd, &master);
-						if (fd > maxfd)
-							maxfd = fd;
-						printf("server: new connection from %s\n", inet_ntop(cliaddr.ss_family,
-									get_ipv4_or_ipv6((struct sockaddr *)&cliaddr),
-									remote, INET6_ADDRSTRLEN));
-
-					}
-				}
-				else {
-					if ((n = recv(i, buf, sizeof buf, 0)) <= 0) {
-						if (n == 0)
-							printf("socket %d disconnected\n", i);
-						else
-							ERROR("recv");
-						close(i);
-						FD_CLR(i, &master);
-					}
-					else {
-						if (!cmd) {
-							if (strncmp(buf, "write", 5) == 0){
-								cmd = WRITE;
-								skip = 5;
-							}
-							else if (strncmp(buf, "put", 3) == 0)
-								cmd = PUT;
-							else if (strncmp(buf, "list", 4) == 0)
-								cmd = LIST;
-							else if (strncmp(buf, "get", 3) == 0)
-								cmd = GET;
-						}
-						if (cmd == WRITE) {
-							for (j = 0; j <= maxfd; j++) {
-								if (FD_ISSET(j, &master))
-									if (j != listener && j != i){
-										if (send(j, buf + skip, n-skip, 0) < 0)
-											ERROR("send");
-										if (buf[n-1] == '\n')
-											send(j, PROMPT, strlen(PROMPT), 0);
-									}
-							}
-							skip = 0;
-							if (buf[n-1] == '\n'){
-								memset(buf, 0, sizeof buf);
-								cmd = 0;
-							}
-						}
-						if (cmd == PUT) {
-							cmd = 0;
-							handle_put(i);
-							memset(buf, 0, sizeof buf);
-						}
-						if (cmd == LIST){
-							cmd = 0;
-							list_files(i);
-						}
-						if (cmd == GET){
-							cmd = 0;
-							handle_get(i, buf + 3);
-							memset(buf, 0, sizeof buf);
-						}
-					}
-				}
-			}
+		if (pthread_create(&tid, NULL, thread_handler, (void *) fd) != 0) {
+			printf("failed to spawn new thread for %s\n", remote);
+			continue;
 		}
+		
+
 	}
 }

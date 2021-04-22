@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <pthread.h>
 #include <signal.h>
 #include <dirent.h>
 #include <sys/stat.h>
@@ -45,6 +46,14 @@
 void *get_ipv4_or_ipv6(struct sockaddr *);
 int write_to_file(int, int, int);
 int readn(int, char *, int);
+
+/* structure to keep track of connected clients */
+
+struct cli_fds {
+	pthread_mutex_t	f_lock;
+	fd_set		fds;
+	int		maxfd;
+};
 
 struct rq {
 	unsigned int magic;
