@@ -105,8 +105,6 @@ void *thread_handler(void *arg)
 	FD_SET(fd, &clients.fds);
 	pthread_mutex_unlock(&clients.f_lock);
 
-	printf("socket: %d\n", fd);
-
 	for ( ; ; ) {
 		n = read(fd, buf, BUFSIZ);
 
@@ -169,7 +167,7 @@ int main()
 	int fd;
 	struct sockaddr_storage cliaddr;
 	struct addrinfo hints, *ai, *p;
-	socklen_t len;
+	socklen_t len = sizeof(struct sockaddr_storage);
 
 	char remote[INET6_ADDRSTRLEN];
 	int yes = 1, rv;
