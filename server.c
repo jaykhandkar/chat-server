@@ -78,6 +78,12 @@ void handle_get(int sockfd, char *file)
 		send(sockfd, &rqbuf, sizeof rqbuf, 0);
 		return;
 	}
+
+	if (!S_ISREG(statbuf.st_mode)) {
+		send(sockfd, &rqbuf, sizeof rqbuf, 0);
+		return;
+	}
+
 	rqbuf.magic = MAGIC;
 	rqbuf.len = statbuf.st_size;
 	strcpy(rqbuf.filename, x);
