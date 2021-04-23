@@ -58,5 +58,5 @@ struct cli_fds {
 struct rq {
 	unsigned int magic;
 	off_t len;
-	char filename[PATH_MAX];
+	char filename[1024];
 };
