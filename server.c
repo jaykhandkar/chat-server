@@ -96,20 +96,24 @@ void handle_get(int sockfd, char *file)
 void *thread_handler(void *arg)
 {
 	int fd = (int) arg;
-	int n;
+	int n, nuser;
 	int skip;
 	int cmd = 0;
 	char buf[BUFSIZ];
+	char username[UNAME_MAX]; //username, needs to be thread local
 
 	pthread_mutex_lock(&clients.f_lock);
 	FD_SET(fd, &clients.fds);
 	pthread_mutex_unlock(&clients.f_lock);
 
+	nuser = read(fd, username, UNAME_MAX);
+	printf("username for socket %d is %s\n", fd, username);
+
 	for ( ; ; ) {
 		n = read(fd, buf, BUFSIZ);
 
 		if (n == 0) {
-			printf("socket %d hung up\n", fd);
+			printf("socket %d :%s hung up\n", fd, username);
 			pthread_mutex_lock(&clients.f_lock);
 			FD_CLR(fd, &clients.fds);
 			pthread_mutex_unlock(&clients.f_lock);
@@ -131,6 +135,8 @@ void *thread_handler(void *arg)
 		if (cmd == WRITE) {
 			for (int i = 0; i <= clients.maxfd; i++){
 				if (i != fd && FD_ISSET(i, &clients.fds)) {
+					write(i, username, nuser);
+					write(i, ":", 1);
 					write(i, buf + skip, n - skip);
 					if (buf[n-1] == '\n')
 						write(i, PROMPT, strlen(PROMPT));

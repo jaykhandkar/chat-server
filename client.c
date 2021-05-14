@@ -97,11 +97,18 @@ int main(int argc, char *argv[])
 	char s[INET6_ADDRSTRLEN];
 	size_t len = 0;
 	ssize_t read;
+	char username[UNAME_MAX];
 
-	if (argc != 2) {
-		printf("usage: client <hostname>\n");
+	if (argc != 3) {
+		printf("usage: client <hostname> <username>\n");
 		exit(1);
 	}
+
+	if (strlen(argv[2]) + 1> UNAME_MAX) {
+		printf("username should be less than %d characters long\n", UNAME_MAX);
+		exit(1);
+	}
+	strcpy(username, argv[2]);
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
@@ -134,6 +141,8 @@ int main(int argc, char *argv[])
 	printf("client: connecting to %s\n", s);
 
 	freeaddrinfo(servinfo);
+
+	send(sockfd, username, strlen(username) + 1, 0);
 
 	if (!(pid = fork()))
 		recv_loop(sockfd);

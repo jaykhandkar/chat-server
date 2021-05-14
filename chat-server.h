@@ -17,6 +17,9 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
+#define UNAME_MAX 256 /*max length of an username*/
+#define MAX_USERS 20  /*max users connected to the server at a time */
+
 #if BUFSIZ < (PATH_MAX + 5)
 #undef BUFSIZ
 #define BUFSIZ (PATH_MAX + 5)
