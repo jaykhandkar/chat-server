@@ -17,13 +17,18 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
-#define UNAME_MAX 256 /*max length of an username*/
-#define MAX_USERS 20  /*max users connected to the server at a time */
+#define UNAME_MAX 256 /* max length of an username*/
+#define MAX_USERS 20  /* max users connected to the server at a time */
+
+#define MAXBUFF 2048  /* size of send and receive buffers */
 
 #if BUFSIZ < (PATH_MAX + 5)
 #undef BUFSIZ
 #define BUFSIZ (PATH_MAX + 5)
 #endif
+
+#undef BUFSIZ
+#define BUFSIZ 10
 
 /* this is the directory where the server will store files put up by clients */
 #define SERVDIR "/home/jay/.cache/server/"
@@ -36,7 +41,7 @@
 
 #define MAGIC 0xfefefefe
 
-#define PROMPT "🗭 "
+#define PROMPT "💭 "
 
 #ifdef  DEBUG
 #define ERROR(X) perror(X)

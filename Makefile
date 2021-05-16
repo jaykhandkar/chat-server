@@ -5,10 +5,10 @@ DEPS = chat-server.h
 %.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-server: server.o utils.o
+server: server.o utils.o tcp.o
 	$(CC) -o $@ $^ $(CFLAGS)
 
-client: client.o utils.o
+client: client.o utils.o tcp.o
 	$(CC) -o $@ $^ $(CFLAGS)
 
 clean:

@@ -36,3 +36,47 @@ int writen(int fd, char *ptr, int nbytes)
 	}
 	return (nbytes - nleft);
 }
+
+void tcp_send(int sockfd, char *buf, int nbytes)
+{
+	int n;
+	int templen;
+
+	templen = htons(nbytes);
+	n = writen(sockfd, (char *)&templen, sizeof(int));
+	if (n != sizeof(int)) {
+		printf("writen prefix error\n");
+		exit(1);
+	}
+
+	n = writen(sockfd, buf, nbytes);
+	if (n != nbytes) {
+		printf("writen data error\n");
+		exit(1);
+	}
+}
+
+int tcp_recv(int sockfd, char *buf, int maxlen)
+{
+	int templen;
+	int n;
+
+	n = readn(sockfd, (char *) &templen, sizeof(int));
+	if (n != sizeof(int)) {
+		printf("readn length prefix error\n");
+		exit(1);
+	}
+
+	templen = ntohl(templen);
+	if (templen > maxlen) {
+		printf("record too large\n");
+		exit(1);
+	}
+
+	n = readn(sockfd, buf, templen);
+	if (n != templen) {
+		printf("readn data error\n");
+		exit(1);
+	}
+	return n;
+}
