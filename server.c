@@ -32,6 +32,9 @@ void handle_put(int sockfd)
 		printf("received rq struct of %d bytes\n", n);
 		printf("attempting to retrieve file %s\n", rqbuf.filename);
 		printf("file size = %ld\n", rqbuf.len);
+	}else {
+		printf("an error occured\n");
+		return;
 	}
 
 	fd = open(strcat(buf, rqbuf.filename), O_RDWR | O_CREAT, S_IRWXU);
