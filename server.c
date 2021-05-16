@@ -20,7 +20,7 @@ void handle_put(int sockfd)
 {
 	struct rq rqbuf;
 	struct rq zero = {0};
-	int rv;
+	off_t rv;
 	int fd;
 	int n;
 	char buf[PATH_MAX];

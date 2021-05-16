@@ -47,7 +47,7 @@
 #define PORT "9034"
 
 void *get_ipv4_or_ipv6(struct sockaddr *);
-int write_to_file(int, int, int);
+off_t write_to_file(int, int, off_t);
 int readn(int, char *, int);
 
 /* structure to keep track of connected clients */

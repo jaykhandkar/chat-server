@@ -55,7 +55,8 @@ void send_file(int sockfd, char *path)
 void get_file(int sockfd)
 {
 	struct rq rqbuf;
-	int fd, rv;
+	int fd;
+	off_t rv;
 	
 	readn(sockfd, (char *)&rqbuf, sizeof rqbuf);
 	if (rqbuf.magic != MAGIC){
