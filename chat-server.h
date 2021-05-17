@@ -17,10 +17,14 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
+#define get_int(addr)		( ntohl(* (int *) (addr)) )
+#define set_int(val, addr)	( *( (int *) (addr) ) = htonl(val) )
+
 #define UNAME_MAX 256 /* max length of an username*/
 #define MAX_USERS 20  /* max users connected to the server at a time */
 
 #define MAXBUFF 2048  /* size of send and receive buffers */
+#define MAXDATA 512   /* maximum amount of data in a data packet */
 
 #if BUFSIZ < (PATH_MAX + 5)
 #undef BUFSIZ

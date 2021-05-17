@@ -98,6 +98,9 @@ int main(int argc, char *argv[])
 	size_t len = 0;
 	ssize_t read;
 	char username[UNAME_MAX];
+	char sendbuff[MAXBUFF];
+	int msglen;
+	int i;
 
 	if (argc != 3) {
 		printf("usage: client <hostname> <username>\n");
@@ -153,14 +156,33 @@ int main(int argc, char *argv[])
 		while (isspace(*x ))
 			x++;
 		if (strncmp(x, "write", 5) == 0){
-			send(sockfd, x, strlen(x), 0);
+			msglen = strlen(x + 5);
+			if (msglen < MAXDATA) { /* can fit into one packet */
+				memcpy(sendbuff, "write", 5);
+				set_int(1, sendbuff + 5);
+				memcpy(sendbuff + 5 + sizeof(int), x + 5, msglen);
+				tcp_send(sockfd, sendbuff, msglen + 5 + sizeof(int));
+			} else { /* break it up into packets and send */
+				for ( i = 0; i < (msglen / MAXDATA); i++) {
+					memcpy(sendbuff, "write", 5);
+					set_int(i + 1, sendbuff + 5);
+					memcpy(sendbuff + 5 + sizeof(int), x + 5 + (MAXDATA*i), MAXDATA);
+					tcp_send(sockfd, sendbuff, MAXDATA + 5 + sizeof(int));
+				}
+				memcpy(sendbuff, "write", 5);
+				set_int(i + 1, sendbuff + 5);
+				memcpy(sendbuff + 5 + sizeof(int), x + 5 + (MAXDATA*i), msglen % MAXDATA);
+				tcp_send(sockfd, sendbuff, (msglen % MAXDATA) + 5 + sizeof(int));
+				
+			}
+		//	send(sockfd, x, strlen(x), 0);
 		}
 		else if (strncmp(x, "put", 3) == 0) {
 			send(sockfd, x, strlen(x), 0);
 			send_file(sockfd, x + 3);
 		}
 		else if (strncmp(x, "list", 4) == 0) {
-			send(sockfd, x, strlen(x), 0);
+			tcp_send(sockfd, x, strlen(x));
 		}
 		else if (strncmp(x, "get", 3) == 0) {
 			kill(pid, SIGKILL);

@@ -62,6 +62,9 @@ int tcp_recv(int sockfd, char *buf, int maxlen)
 	int n;
 
 	n = readn(sockfd, (char *) &templen, sizeof(int));
+	if (n == 0)
+		return n;
+
 	if (n != sizeof(int)) {
 		printf("readn length prefix error\n");
 		exit(1);

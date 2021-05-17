@@ -7,11 +7,13 @@ void list_files(int sockfd)
 	DIR *dirp = opendir(SERVDIR);
 	struct dirent *entry;
 
-	while ((entry = readdir(dirp)) != NULL)
+	while ((entry = readdir(dirp)) != NULL) {
 		if (strcmp(entry->d_name, ".") && strcmp(entry->d_name, "..")){
 				send(sockfd, entry->d_name, strlen(entry->d_name), 0);
 				send(sockfd, "\n", 1, 0);
 		}
+	}
+
 	send(sockfd, PROMPT, strlen(PROMPT), 0);
 	closedir(dirp);
 }
@@ -99,7 +101,8 @@ void *thread_handler(void *arg)
 	int n, nuser;
 	int skip;
 	int cmd = 0;
-	char buf[BUFSIZ];
+	int msglen, msgblknum;
+	char buf[MAXBUFF];
 	char username[UNAME_MAX]; //username, needs to be thread local
 
 	pthread_mutex_lock(&clients.f_lock);
@@ -110,8 +113,27 @@ void *thread_handler(void *arg)
 	printf("username for socket %d is %s\n", fd, username);
 
 	for ( ; ; ) {
-		n = read(fd, buf, BUFSIZ);
+		n = tcp_recv(fd, buf, MAXBUFF);
+		
+		if (strncmp(buf, "write", 5) == 0) {
+			msgblknum = get_int(buf + 5);
+			msglen = n - 5 - sizeof(int);
+			for (int i = 0; i <= clients.maxfd; i++){
+				if (i != fd && FD_ISSET(i, &clients.fds)) {
+					if (msgblknum == 1) {
+						write(i, username, nuser);
+						write(i, ":", 1);
+					}
+					write(i, buf + 5 + sizeof(int), msglen);
+					if (msglen < MAXDATA)
+						write(i, PROMPT, strlen(PROMPT));
+				}
+			}
+		}
 
+		if (strncmp(buf, "list", 4) == 0)
+			list_files(fd);
+		
 		if (n == 0) {
 			printf("socket %d :%s hung up\n", fd, username);
 			pthread_mutex_lock(&clients.f_lock);
@@ -119,8 +141,8 @@ void *thread_handler(void *arg)
 			pthread_mutex_unlock(&clients.f_lock);
 			return (void *)0;
 		}
-
-		if (cmd == 0) {
+		
+		/*if (cmd == 0) {
 			if (strncmp(buf, "write", 5) == 0){
 				cmd = WRITE;
 				skip = 5;
@@ -161,7 +183,7 @@ void *thread_handler(void *arg)
 			cmd = 0;
 			handle_put(fd);
 			memset(buf, 0, sizeof buf);
-		}
+		}*/
 
 	}
 	return (void *)0;
