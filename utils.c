@@ -9,10 +9,10 @@ void *get_ipv4_or_ipv6(struct sockaddr *sa)
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-int write_to_file (int sockfd, int fd, int len)
+off_t write_to_file (int sockfd, int fd, off_t len)
 {
-	int rem;
-	int tot = 0;
+	off_t rem;
+	off_t tot = 0;
 	char buf[BUFSIZ];
 
 	if (len < BUFSIZ) {

@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <pthread.h>
 #include <signal.h>
 #include <dirent.h>
 #include <sys/stat.h>
@@ -15,6 +16,9 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+
+#define UNAME_MAX 256 /*max length of an username*/
+#define MAX_USERS 20  /*max users connected to the server at a time */
 
 #if BUFSIZ < (PATH_MAX + 5)
 #undef BUFSIZ
@@ -43,11 +47,19 @@
 #define PORT "9034"
 
 void *get_ipv4_or_ipv6(struct sockaddr *);
-int write_to_file(int, int, int);
+off_t write_to_file(int, int, off_t);
 int readn(int, char *, int);
+
+/* structure to keep track of connected clients */
+
+struct cli_fds {
+	pthread_mutex_t	f_lock;
+	fd_set		fds;
+	int		maxfd;
+};
 
 struct rq {
 	unsigned int magic;
 	off_t len;
-	char filename[PATH_MAX];
+	char filename[1024];
 };
