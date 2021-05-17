@@ -42,7 +42,7 @@ void tcp_send(int sockfd, char *buf, int nbytes)
 	int n;
 	int templen;
 
-	templen = htons(nbytes);
+	templen = htonl(nbytes);
 	n = writen(sockfd, (char *)&templen, sizeof(int));
 	if (n != sizeof(int)) {
 		printf("writen prefix error\n");

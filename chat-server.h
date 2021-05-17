@@ -51,6 +51,10 @@
 
 #define PORT "9034"
 
+/* tcp.c */
+void tcp_send(int, char*, int);
+int tcp_recv(int, char *, int);
+
 void *get_ipv4_or_ipv6(struct sockaddr *);
 int write_to_file(int, int, int);
 int readn(int, char *, int);
