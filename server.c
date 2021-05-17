@@ -140,7 +140,8 @@ void *thread_handler(void *arg)
 			 * down the lock anyway. this is so that if two 
 			 * messages are being sent at once, they don't get 
 			 * mangled or interleaved. */
-			pthread_mutex_lock(&clients.f_lock);
+			if (skip != 0)
+				pthread_mutex_lock(&clients.f_lock);
 			for (int i = 0; i <= clients.maxfd; i++){
 				if (i != fd && FD_ISSET(i, &clients.fds)) {
 					if (skip != 0) {
@@ -148,11 +149,12 @@ void *thread_handler(void *arg)
 						write(i, ":", 1);
 					}
 					write(i, buf + skip, n - skip);
-					if (buf[n-1] == '\n')
+					if (buf[n-1] == '\n') {
 						write(i, PROMPT, strlen(PROMPT));
+						pthread_mutex_unlock(&clients.f_lock);
+					}
 				}
 			}
-			pthread_mutex_unlock(&clients.f_lock);
 			skip = 0;
 			if (buf[n-1] == '\n')
 				cmd = 0;
