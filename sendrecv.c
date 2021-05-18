@@ -83,7 +83,7 @@ int recv_data(struct tftp *p, char *buf, int nbytes)
 		exit(1);
 	}
 
-	send_ack(recvblknum);
+	send_ack(p, recvblknum);
 	
 	if (nbytes == MAXDATA)
 		return 0;
@@ -112,7 +112,7 @@ int recv_ack(struct tftp *p, char *buf, int nbytes)
 		}
 		return 0;
 	}
-	else if (recvblknum == nextblknum - 1) {
+	else if (recvblknum == p->nextblknum - 1) {
 		return 0;
 	}
 	else {
@@ -126,8 +126,8 @@ void send_err(struct tftp *p, short errcode, char *str)
 	char sendbuf[MAXBUFF];
 	int nbytes;
 
-	set_short(buf, OP_ERR);
-	set_short(errcode, sendbuf + 2);
+	set_short(sendbuf, OP_ERROR);
+	set_short(sendbuf + 2, errcode);
 
 	strcpy(sendbuf + 4, str);
 	nbytes = 4 + strlen(str) + 1;
