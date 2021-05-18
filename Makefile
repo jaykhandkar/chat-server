@@ -1,14 +1,14 @@
 CC = gcc
-CFLAGS = -I. -Wall -Wextra -pthread
+CFLAGS = -I. -pthread
 DEPS = chat-server.h
 
 %.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-server: server.o utils.o tcp.o
+server: server.o utils.o tcp.o tftp.o sendrecv.o
 	$(CC) -o $@ $^ $(CFLAGS)
 
-client: client.o utils.o tcp.o
+client: client.o utils.o tcp.o tftp.o sendrecv.o
 	$(CC) -o $@ $^ $(CFLAGS)
 
 clean:
