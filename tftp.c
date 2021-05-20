@@ -1,6 +1,5 @@
 #include <chat-server.h>
 
-
 struct tftp *tftp_init(int sockfd)
 {
 	struct tftp *p = malloc(sizeof(struct tftp));

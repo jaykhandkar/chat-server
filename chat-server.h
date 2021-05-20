@@ -77,13 +77,48 @@
 
 #define PORT "9034"
 
+/* encapsulates the state of a tftp transaction */
+
+struct tftp {
+	int lastsent;			/* amount of data in last data packet */
+	int remotefd;			/* socket descriptor of remote */
+	int localfd;			/* file that is being read from */
+	char localfname[PATH_MAX];	/* and the corresponding filename */
+	int nextblknum;			/* expected block number of next data packet */
+	int op_sent;			/* op code of last packet sent */
+	int op_recv;			/* op code of last packet received */
+};
+
 /* tcp.c */
+
 void tcp_send(int, char*, int);
 int tcp_recv(int, char *, int);
+int readn(int, char *, int);
+int writen(int, char *, int);
+
+/* sendrecv.c */
+
+void send_rq(struct tftp*, short, char *);
+int recv_rqerr(struct tftp *, char *, int);
+void send_ack(struct tftp *, short);
+int send_data(struct tftp *, short);
+int recv_data(struct tftp *, char *,  int);
+int recv_ack(struct tftp *, char *, int);
+void send_err(struct tftp *, short, char *);
+int recv_read_rq(struct tftp *, char *, int);
+int recv_write_rq(struct tftp *, char *, int);
+
+/* tftp.c */
+struct tftp *tftp_init(int);
+void tftp_destroy(struct tftp *);
+
+/* fsm.c */
+int fsm_error(struct tftp *, char *, int);
+int fsm_invalid(struct tftp *, char *, int);
+void fsm_loop(struct tftp *);
 
 void *get_ipv4_or_ipv6(struct sockaddr *);
 int write_to_file(int, int, int);
-int readn(int, char *, int);
 
 /* structure to keep track of connected clients */
 
@@ -93,16 +128,6 @@ struct cli_fds {
 	int		maxfd;
 };
 
-/* encapsulates the state of a tftp transaction */
-
-struct tftp {
-	int lastsent;	/* amount of data in last data packet */
-	int remotefd;	/* socket descriptor of remote */
-	int localfd;	/* file that is being read from */
-	int nextblknum;	/* expected block number of next data packet */
-	int op_sent;	/* op code of last packet sent */
-	int op_recv;	/* op code of last packet received */
-};
 
 struct rq {
 	unsigned int magic;

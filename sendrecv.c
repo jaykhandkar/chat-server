@@ -12,7 +12,9 @@ void send_rq(struct tftp *p, short opcode, char *file)
 	nbytes = 2 + strlen(file) + 1;
 
 	tcp_send(p->remotefd, sendbuf, nbytes);
+	printf("here\n");
 	p->op_sent = opcode;
+	p->nextblknum = 1;
 }
 
 int recv_rqerr(struct tftp *p, char *buf, int nbytes)
@@ -24,6 +26,7 @@ int recv_rqerr(struct tftp *p, char *buf, int nbytes)
 	nbytes -= 2;
 	buf[nbytes] = 0;
 
+	unlink(p->localfname);
 	printf("error code %d: %s\n", errcode, buf);
 	return -1;
 }
@@ -45,6 +48,7 @@ int send_data(struct tftp *p, short blknum)
 	char sendbuf[MAXBUFF];
 	int nread;
 
+	printf("sending block #%d\n", blknum);
 	set_short(sendbuf, OP_DATA);
 	set_short(sendbuf + 2, blknum);
 
@@ -133,7 +137,48 @@ void send_err(struct tftp *p, short errcode, char *str)
 	nbytes = 4 + strlen(str) + 1;
 	tcp_send(p->remotefd, sendbuf, nbytes);
 
-	exit(1);
 }
 
+int recv_read_rq(struct tftp *p, char *buf, int nbytes)
+{
+	char filename[PATH_MAX];
+	struct stat stbuf;
+	int fd;
+	int fileok = 0;
+
+	for (int i = 0; i < nbytes; i++)
+		if (buf[i] == '\0')
+			fileok = 1;
+
+	if (fileok != 1) {
+		send_err(p, ERR_BADOP, "bad filename");
+		return -1;
+	}
+
+	if (strlen(buf) + strlen(SERVDIR) + 1 > PATH_MAX) {
+		send_err(p, ERR_NOTDEF, "path to file too long");
+		return -1;
+	}
+
+	strcpy(filename, SERVDIR);
+	strcat(filename, buf);
+
+	fd = open(filename, O_RDONLY);
+	if (fd < 0) {
+		send_err(p, ERR_FNF, strerror(errno));
+		return -1;
+	}
+
+	p->localfd = fd;
+	p->nextblknum++;  /* block #1 */
+	send_data(p, p->nextblknum);
+
+	return 0;
+}
+
+int recv_write_rq(struct tftp *p, char *buf, int nbytes)
+{
+	/* not implemented */
+	return -1;
+}
 

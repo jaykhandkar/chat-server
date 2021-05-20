@@ -9,6 +9,30 @@ void recv_loop(int fd)
 		write(1, buf, n);
 }
 
+void do_get(char *file, int servfd)
+{
+	struct tftp *p;
+
+	p = tftp_init(servfd);
+	if (strlen(file) + 1 > PATH_MAX) {
+		printf("path too long\n");
+		return;
+	}
+	strcpy(p->localfname, file);
+
+	p->localfd = open(file, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+	if (p->localfd < 0) {
+		printf("failed to open local file for writing: %s\n", file);
+		tftp_destroy(p);
+		return;
+	}
+
+	send_rq(p, OP_RRQ, file);
+	fsm_loop(p);
+	close(p->localfd);
+	tftp_destroy(p);
+}
+
 void send_file(int sockfd, char *path)
 {
 	int fd;
@@ -186,9 +210,21 @@ int main(int argc, char *argv[])
 		}
 		else if (strncmp(x, "get", 3) == 0) {
 			kill(pid, SIGKILL);
-			send(sockfd, x, strlen(x), 0);
-			get_file(sockfd);
-			if (!(pid = fork()))
+			/*send(sockfd, x, strlen(x), 0);
+			get_file(sockfd);*/
+
+			x += 3;
+			while (isspace(*x))
+				x++;
+
+			if (strlen(x) > 0) {
+				x[strlen(x) - 1] = '\0'; /* getline adds a newline, delete it */
+				do_get(x, sockfd);
+			} else {
+				printf("enter a non-empty filename\n");
+			}
+
+			if ((pid = fork()) == 0)
 				recv_loop(sockfd);
 		}
 		else

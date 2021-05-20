@@ -1,6 +1,7 @@
 #include <chat-server.h>
 
 struct cli_fds clients;
+extern int (*fsm_table [6][6])(struct tftp *, char *, int);
 
 void list_files(int sockfd)
 {
@@ -102,8 +103,10 @@ void *thread_handler(void *arg)
 	int skip;
 	int cmd = 0;
 	int msglen, msgblknum;
+	short recvopcode;
 	char buf[MAXBUFF];
 	char username[UNAME_MAX]; //username, needs to be thread local
+	struct tftp *p;
 
 	pthread_mutex_lock(&clients.f_lock);
 	FD_SET(fd, &clients.fds);
@@ -112,9 +115,18 @@ void *thread_handler(void *arg)
 	nuser = read(fd, username, UNAME_MAX);
 	printf("username for socket %d is %s\n", fd, username);
 
+	p = tftp_init(fd);
 	for ( ; ; ) {
 		n = tcp_recv(fd, buf, MAXBUFF);
 		
+		if (n == 0) {
+			printf("socket %d :%s hung up\n", fd, username);
+			pthread_mutex_lock(&clients.f_lock);
+			FD_CLR(fd, &clients.fds);
+			pthread_mutex_unlock(&clients.f_lock);
+			return (void *)0;
+		}
+
 		if (strncmp(buf, "write", 5) == 0) {
 			msgblknum = get_int(buf + 5);
 			msglen = n - 5 - sizeof(int);
@@ -129,18 +141,32 @@ void *thread_handler(void *arg)
 						write(i, PROMPT, strlen(PROMPT));
 				}
 			}
+			continue;
 		}
 
-		if (strncmp(buf, "list", 4) == 0)
+		if (strncmp(buf, "list", 4) == 0) {
 			list_files(fd);
-		
-		if (n == 0) {
-			printf("socket %d :%s hung up\n", fd, username);
-			pthread_mutex_lock(&clients.f_lock);
-			FD_CLR(fd, &clients.fds);
-			pthread_mutex_unlock(&clients.f_lock);
-			return (void *)0;
+			continue;
 		}
+		
+		recvopcode = get_short(buf);
+		if (recvopcode > 5 || recvopcode < 1) {
+			printf("received invalid op code\n");
+			return (void *) 0;
+		}
+
+		p->op_recv = recvopcode;
+		printf("op_recv = %d, op_sent = %d\n", p->op_recv, p->op_sent);
+
+		if ((*fsm_table[p->op_sent][p->op_recv])(p, buf + 2, n - 2) < 0) {
+			p->op_sent = 0;
+			p->op_recv = 0;
+			p->localfd = 0;
+			p->nextblknum = 0;
+			p->lastsent = 0;
+			continue;
+		}
+
 		
 		/*if (cmd == 0) {
 			if (strncmp(buf, "write", 5) == 0){
@@ -186,6 +212,7 @@ void *thread_handler(void *arg)
 		}*/
 
 	}
+	tftp_destroy(p);
 	return (void *)0;
 }
 
