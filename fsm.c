@@ -109,6 +109,16 @@ void fsm_loop(struct tftp *p)
 	while (1) {
 		nbytes = tcp_recv(p->remotefd, recvbuf, MAXBUFF);
 		
+		if (nbytes == 0) {
+			printf("server died\n");
+			exit(1);
+		}
+
+		if (nbytes < 4) {
+			printf("received packet of size = %d bytes\n", nbytes);
+			return;
+		}
+
 		recvopcode = get_short(recvbuf);
 		if (recvopcode > 6 || recvopcode < 1) {
 			printf("invalid opcode received\n");

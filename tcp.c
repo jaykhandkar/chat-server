@@ -72,7 +72,7 @@ int tcp_recv(int sockfd, char *buf, int maxlen)
 
 	templen = ntohl(templen);
 	if (templen > maxlen) {
-		printf("record too large\n");
+		printf("tcp_recv: record too large\n");
 		exit(1);
 	}
 

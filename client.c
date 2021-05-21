@@ -9,6 +9,43 @@ void recv_loop(int fd)
 		write(1, buf, n);
 }
 
+void do_put(char *file, int servfd)
+{
+	struct tftp *p;
+	struct stat stbuf;
+
+	p = tftp_init(servfd);
+	if (strlen(file) + 1 > PATH_MAX) {
+		printf("path too long\n");
+		return;
+	}
+	strcpy(p->localfname, file);
+
+	p->localfd = open(file, O_RDONLY);
+	if (p->localfd < 0) {
+		printf("failed to open local file for reading: %s\n", file);
+		tftp_destroy(p);
+		return;
+	}
+
+	if (fstat(p->localfd, &stbuf) < 0) {
+		perror("couldnt fstat");
+		tftp_destroy(p);
+		return;
+	}
+
+	if (!S_ISREG(stbuf.st_mode)) {
+		printf("cannot send non-regular file\n");
+		tftp_destroy(p);
+		return;
+	}
+
+	send_rq(p, OP_WRQ, basename(file));
+	fsm_loop(p);
+	close(p->localfd);
+	tftp_destroy(p);
+}
+
 void do_get(char *file, int servfd)
 {
 	struct tftp *p;
@@ -28,12 +65,13 @@ void do_get(char *file, int servfd)
 	}
 
 	send_rq(p, OP_RRQ, file);
+	p->nextblknum++;
 	fsm_loop(p);
 	close(p->localfd);
 	tftp_destroy(p);
 }
 
-void send_file(int sockfd, char *path)
+/*void send_file(int sockfd, char *path)
 {
 	int fd;
 	char buf[BUFSIZ];
@@ -100,7 +138,7 @@ void get_file(int sockfd)
 	}
 
 	close(fd);
-}
+}*/
 
 void usage()
 {
@@ -148,12 +186,12 @@ int main(int argc, char *argv[])
 
 	for (p = servinfo; p != NULL; p = p->ai_next) {
 		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) {
-			ERROR("client: socket");
+			perror("client: socket");
 			continue;
 		}
 
 		if (connect(sockfd, p->ai_addr, p->ai_addrlen) < 0) {
-			ERROR("client: connect");
+			perror("client: connect");
 			continue;
 		}
 		break;
@@ -202,8 +240,24 @@ int main(int argc, char *argv[])
 		//	send(sockfd, x, strlen(x), 0);
 		}
 		else if (strncmp(x, "put", 3) == 0) {
-			send(sockfd, x, strlen(x), 0);
-			send_file(sockfd, x + 3);
+			/*send(sockfd, x, strlen(x), 0);
+			send_file(sockfd, x + 3);*/
+			kill(pid, SIGKILL);
+
+			x += 3;
+			while (isspace(*x))
+				x++;
+
+			if (strlen(x) > 0) {
+				x[strlen(x) - 1] = '\0'; /* getline adds a newline, delete it */
+				do_put(x, sockfd);
+			} else {
+				printf("enter a non-empty filename\n");
+			}
+
+			if ((pid = fork()) == 0)
+				recv_loop(sockfd);
+
 		}
 		else if (strncmp(x, "list", 4) == 0) {
 			tcp_send(sockfd, x, strlen(x));

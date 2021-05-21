@@ -19,7 +19,7 @@ void list_files(int sockfd)
 	closedir(dirp);
 }
 
-void handle_put(int sockfd)
+/*void handle_put(int sockfd)
 {
 	struct rq rqbuf;
 	struct rq zero = {0};
@@ -94,7 +94,7 @@ void handle_get(int sockfd, char *file)
 
 	while ((n = read(fd, buf, sizeof buf)) > 0)
 		send(sockfd, buf, n, 0);
-}
+}*/
 
 void *thread_handler(void *arg)
 {
@@ -271,7 +271,7 @@ int main()
 	freeaddrinfo(ai);
 
 	if (listen(listener, 20) < 0) {
-		ERROR("listen");
+		perror("listen");
 		exit(1);
 	}
 

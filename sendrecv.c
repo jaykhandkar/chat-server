@@ -14,7 +14,6 @@ void send_rq(struct tftp *p, short opcode, char *file)
 	tcp_send(p->remotefd, sendbuf, nbytes);
 	printf("here\n");
 	p->op_sent = opcode;
-	p->nextblknum = 1;
 }
 
 int recv_rqerr(struct tftp *p, char *buf, int nbytes)
@@ -76,6 +75,7 @@ int recv_data(struct tftp *p, char *buf, int nbytes)
 	}
 
 	if (recvblknum == p->nextblknum) {
+		printf("okay, recvblknum = %d nexblknum = %d\n", recvblknum, p->nextblknum);
 		p->nextblknum++;
 
 		if (nbytes > 0)
@@ -107,6 +107,7 @@ int recv_ack(struct tftp *p, char *buf, int nbytes)
 
 	recvblknum = get_short(buf);
 	if (recvblknum == p->nextblknum) {
+		printf("okay\n");
 		p->nextblknum++;
 		n = send_data(p, p->nextblknum);
 
@@ -151,7 +152,7 @@ int recv_read_rq(struct tftp *p, char *buf, int nbytes)
 			fileok = 1;
 
 	if (fileok != 1) {
-		send_err(p, ERR_BADOP, "bad filename");
+		send_err(p, ERR_BADOP, "bad filename: not null terminated");
 		return -1;
 	}
 
@@ -178,7 +179,40 @@ int recv_read_rq(struct tftp *p, char *buf, int nbytes)
 
 int recv_write_rq(struct tftp *p, char *buf, int nbytes)
 {
-	/* not implemented */
-	return -1;
+	char filename[PATH_MAX];
+	int fd;
+	int fileok = 0;
+
+	for (int i = 0; i < nbytes; i++)
+		if (buf[i] == '\0')
+			fileok = 1;
+
+	if (fileok != 1) {
+		send_err(p, ERR_BADOP, "bad filename: not null terminated");
+		return -1;
+	}
+
+	if (strlen(buf) + strlen(SERVDIR) + 1 > PATH_MAX) {
+		send_err(p, ERR_NOTDEF, "path to file too long");
+		return -1;
+	}
+	printf("received WRQ for %s\n", buf);
+	
+	strcpy(filename, SERVDIR);
+	strcat(filename, buf);
+	strcpy(p->localfname, filename);
+
+	fd = open(filename, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+	if (fd < 0) {
+		send_err(p, ERR_NOTDEF, strerror(errno));
+		return -1;
+	}
+
+	p->localfd = fd;
+	p->nextblknum++;
+
+	send_ack(p, 0);
+
+	return 0;
 }
 

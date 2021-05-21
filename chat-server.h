@@ -48,32 +48,10 @@
 #define MAXBUFF 2048  /* size of send and receive buffers */
 #define MAXDATA 512   /* maximum amount of data in a data packet */
 
-#if BUFSIZ < (PATH_MAX + 5)
-#undef BUFSIZ
-#define BUFSIZ (PATH_MAX + 5)
-#endif
-
-#undef BUFSIZ
-#define BUFSIZ 10
-
 /* this is the directory where the server will store files put up by clients */
 #define SERVDIR "/home/jay/.cache/server/"
-#define DEBUG 1
-
-#define WRITE	0xa
-#define PUT	0xb 
-#define GET	0xc
-#define LIST	0xd
-
-#define MAGIC 0xfefefefe
 
 #define PROMPT "💭 "
-
-#ifdef  DEBUG
-#define ERROR(X) perror(X)
-#else
-#define ERROR(X)
-#endif
 
 #define PORT "9034"
 
@@ -128,9 +106,3 @@ struct cli_fds {
 	int		maxfd;
 };
 
-
-struct rq {
-	unsigned int magic;
-	off_t len;
-	char filename[1024];
-};
