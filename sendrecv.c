@@ -12,7 +12,6 @@ void send_rq(struct tftp *p, short opcode, char *file)
 	nbytes = 2 + strlen(file) + 1;
 
 	tcp_send(p->remotefd, sendbuf, nbytes);
-	printf("here\n");
 	p->op_sent = opcode;
 }
 
@@ -107,7 +106,7 @@ int recv_ack(struct tftp *p, char *buf, int nbytes)
 
 	recvblknum = get_short(buf);
 	if (recvblknum == p->nextblknum) {
-		printf("okay\n");
+		printf("okay, corect ACK received\n");
 		p->nextblknum++;
 		n = send_data(p, p->nextblknum);
 
