@@ -124,6 +124,7 @@ void *thread_handler(void *arg)
 			pthread_mutex_lock(&clients.f_lock);
 			FD_CLR(fd, &clients.fds);
 			pthread_mutex_unlock(&clients.f_lock);
+			tftp_destroy(p);
 			return (void *)0;
 		}
 
