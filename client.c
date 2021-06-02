@@ -41,6 +41,7 @@ void do_put(char *file, int servfd)
 	}
 
 	send_rq(p, OP_WRQ, basename(file));
+	printf("sending file...\n");
 	fsm_loop(p);
 	close(p->localfd);
 	tftp_destroy(p);
@@ -70,75 +71,6 @@ void do_get(char *file, int servfd)
 	close(p->localfd);
 	tftp_destroy(p);
 }
-
-/*void send_file(int sockfd, char *path)
-{
-	int fd;
-	char buf[BUFSIZ];
-	struct stat statbuf = {0};
-	struct rq rqbuf = {0};
-	int n;
-
-	while (isspace(*path))
-		path++;
-
-	path[strlen(path)-1] = 0;
-	fd = open(path, O_RDONLY);
-	if (fd < 0) {
-		perror("open");
-		send(sockfd, &rqbuf, sizeof rqbuf, 0);
-		return;
-	}
-
-	if (fstat(fd, &statbuf) < 0) {
-		perror("fstat");
-		send(sockfd, &rqbuf, sizeof rqbuf, 0);
-		return;
-	}
-
-	if (!S_ISREG(statbuf.st_mode)) {
-		printf("please enter a regular file\n");
-		send(sockfd, &rqbuf, sizeof rqbuf, 0);
-		return;
-	}
-
-	rqbuf.magic = MAGIC;
-	rqbuf.len = statbuf.st_size;
-	strcpy(rqbuf.filename, basename(path));
-	send(sockfd, &rqbuf, sizeof rqbuf, 0);
-
-	printf("sending file...\n");
-	while ((n = read(fd, buf, sizeof buf)) > 0)
-		send(sockfd, buf, n, 0);
-
-	close(fd);
-}
-
-void get_file(int sockfd)
-{
-	struct rq rqbuf;
-	int fd, rv;
-	
-	readn(sockfd, (char *)&rqbuf, sizeof rqbuf);
-	if (rqbuf.magic != MAGIC){
-		printf("sorry, an error occured\n");
-		return;
-	}
-
-	fd = open(rqbuf.filename, O_RDWR | O_CREAT, S_IRWXU);
-	printf("receiving file...\n");
-	rv = write_to_file(sockfd, fd, rqbuf.len);
-
-	if (rv == rqbuf.len){
-		printf("all good\n");
-	}
-	else {
-		printf("sorry, an error occured\n");
-		unlink(rqbuf.filename);
-	}
-
-	close(fd);
-}*/
 
 void usage()
 {

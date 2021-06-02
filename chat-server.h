@@ -23,8 +23,8 @@
 #define get_short(addr)		( ntohs(* (short *) (addr)) )
 #define set_short(addr, val)	( *( (short *) (addr) ) = htons(val) )
 
-#define UNAME_MAX 256 /* max length of an username*/
-#define MAX_USERS 20  /* max users connected to the server at a time */
+#define UNAME_MAX 256      /* max length of an username*/
+#define MAX_USERS 20       /* max users connected to the server at a time */
 
 /* op codes for tftp commands */
 
@@ -36,17 +36,17 @@
 
 /* tftp error codes */
 
-#define  ERR_NOTDEF	0 /* not defined */
-#define  ERR_FNF	1 /* file not found */
-#define  ERR_ACC	2 /* access violation */
-#define  ERR_FULL	3 /* disk full/allocation exceeded */
-#define  ERR_BADOP	4 /* illegal tftp operation */
-#define  ERR_BADTRANS	5 /* unknown transfer id (port) (unused)*/
-#define  ERR_BADUSR	6 /* no such user (unused) */
+#define  ERR_NOTDEF	0  /* not defined */
+#define  ERR_FNF	1  /* file not found */
+#define  ERR_ACC	2  /* access violation */
+#define  ERR_FULL	3  /* disk full/allocation exceeded */
+#define  ERR_BADOP	4  /* illegal tftp operation */
+#define  ERR_BADTRANS	5  /* unknown transfer id (port) (unused)*/
+#define  ERR_BADUSR	6  /* no such user (unused) */
 
 
-#define MAXBUFF 2048  /* size of send and receive buffers */
-#define MAXDATA 512   /* maximum amount of data in a data packet */
+#define MAXBUFF 2048       /* size of send and receive buffers */
+#define MAXDATA 512        /* maximum amount of data in a data packet */
 
 /* this is the directory where the server will store files put up by clients */
 #define SERVDIR "/home/jay/.cache/server/"
@@ -65,6 +65,7 @@ struct tftp {
 	int nextblknum;			/* expected block number of next data packet */
 	int op_sent;			/* op code of last packet sent */
 	int op_recv;			/* op code of last packet received */
+	int totbytes;			/* total # of bytes sent/received so far */
 };
 
 /* tcp.c */

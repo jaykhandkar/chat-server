@@ -46,14 +46,19 @@ int send_data(struct tftp *p, short blknum)
 	char sendbuf[MAXBUFF];
 	int nread;
 
-	printf("sending block #%d\n", blknum);
 	set_short(sendbuf, OP_DATA);
 	set_short(sendbuf + 2, blknum);
 
 	nread = read(p->localfd, sendbuf + 4, MAXDATA);
-	if (nread == 0 && p->lastsent < MAXDATA)
+	if (nread == 0 && p->lastsent < MAXDATA) {
+		printf("\ndone\n");
 		return nread;
+	}
 	tcp_send(p->remotefd, sendbuf, nread + 4);
+
+	p->totbytes += nread;
+	printf("sending %s: %d bytes sent\r", p->localfname, p->totbytes);
+
 	p->op_sent = OP_DATA;
 	p->lastsent = nread;
 
@@ -74,13 +79,18 @@ int recv_data(struct tftp *p, char *buf, int nbytes)
 	}
 
 	if (recvblknum == p->nextblknum) {
-		printf("okay, recvblknum = %d nexblknum = %d\n", recvblknum, p->nextblknum);
 		p->nextblknum++;
 
 		if (nbytes > 0)
 			write(p->localfd, buf, nbytes);
-		if (nbytes < MAXDATA)
+
+		p->totbytes += nbytes;
+		printf("receiving %s: %d bytes received\r", p->localfname, p->totbytes);
+
+		if (nbytes < MAXDATA) {
+			printf("\ndone\n");
 			close(p->localfd);
+		}
 	} else {
 		printf("received unexpected data block\n");
 		exit(1);
@@ -106,7 +116,6 @@ int recv_ack(struct tftp *p, char *buf, int nbytes)
 
 	recvblknum = get_short(buf);
 	if (recvblknum == p->nextblknum) {
-		printf("okay, corect ACK received\n");
 		p->nextblknum++;
 		n = send_data(p, p->nextblknum);
 
