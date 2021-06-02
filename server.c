@@ -19,7 +19,6 @@ void list_files(int sockfd)
 	closedir(dirp);
 }
 
-
 void *thread_handler(void *arg)
 {
 	int fd = (int) arg;
