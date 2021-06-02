@@ -97,8 +97,6 @@ void fsm_loop(struct tftp *);
 
 void *get_ipv4_or_ipv6(struct sockaddr *);
 
-int write_to_file(int, int, int);
-
 /* structure to keep track of connected clients */
 
 struct cli_fds {
