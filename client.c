@@ -9,74 +9,67 @@ void recv_loop(int fd)
 		write(1, buf, n);
 }
 
-void send_file(int sockfd, char *path)
+void do_put(char *file, int servfd)
 {
-	int fd;
-	char buf[BUFSIZ];
-	struct stat statbuf = {0};
-	struct rq rqbuf = {0};
-	int n;
+	struct tftp *p;
+	struct stat stbuf;
 
-	while (isspace(*path))
-		path++;
+	p = tftp_init(servfd);
+	if (strlen(file) + 1 > PATH_MAX) {
+		printf("path too long\n");
+		return;
+	}
+	strcpy(p->localfname, file);
 
-	path[strlen(path)-1] = 0;
-	fd = open(path, O_RDONLY);
-	if (fd < 0) {
-		perror("open");
-		send(sockfd, &rqbuf, sizeof rqbuf, 0);
+	p->localfd = open(file, O_RDONLY);
+	if (p->localfd < 0) {
+		printf("failed to open local file for reading: %s\n", file);
+		tftp_destroy(p);
 		return;
 	}
 
-	if (fstat(fd, &statbuf) < 0) {
-		perror("fstat");
-		send(sockfd, &rqbuf, sizeof rqbuf, 0);
+	if (fstat(p->localfd, &stbuf) < 0) {
+		perror("couldnt fstat");
+		tftp_destroy(p);
 		return;
 	}
 
-	if (!S_ISREG(statbuf.st_mode)) {
-		printf("please enter a regular file\n");
-		send(sockfd, &rqbuf, sizeof rqbuf, 0);
+	if (!S_ISREG(stbuf.st_mode)) {
+		printf("cannot send non-regular file\n");
+		tftp_destroy(p);
 		return;
 	}
 
-	rqbuf.magic = MAGIC;
-	rqbuf.len = statbuf.st_size;
-	strcpy(rqbuf.filename, basename(path));
-	send(sockfd, &rqbuf, sizeof rqbuf, 0);
-
+	send_rq(p, OP_WRQ, basename(file));
 	printf("sending file...\n");
-	while ((n = read(fd, buf, sizeof buf)) > 0)
-		send(sockfd, buf, n, 0);
-
-	close(fd);
+	fsm_loop(p);
+	close(p->localfd);
+	tftp_destroy(p);
 }
 
-void get_file(int sockfd)
+void do_get(char *file, int servfd)
 {
-	struct rq rqbuf;
-	int fd;
-	off_t rv;
-	
-	readn(sockfd, (char *)&rqbuf, sizeof rqbuf);
-	if (rqbuf.magic != MAGIC){
-		printf("sorry, an error occured\n");
+	struct tftp *p;
+
+	p = tftp_init(servfd);
+	if (strlen(file) + 1 > PATH_MAX) {
+		printf("path too long\n");
+		return;
+	}
+	strcpy(p->localfname, file);
+
+	p->localfd = open(file, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+	if (p->localfd < 0) {
+		printf("failed to open local file for writing: %s\n", file);
+		tftp_destroy(p);
 		return;
 	}
 
-	fd = open(rqbuf.filename, O_RDWR | O_CREAT, S_IRWXU);
-	printf("receiving file...\n");
-	rv = write_to_file(sockfd, fd, rqbuf.len);
-
-	if (rv == rqbuf.len){
-		printf("all good\n");
-	}
-	else {
-		printf("sorry, an error occured\n");
-		unlink(rqbuf.filename);
-	}
-
-	close(fd);
+	send_rq(p, OP_RRQ, file);
+	p->nextblknum++;
+	fsm_loop(p);
+	close(p->localfd);
+	tftp_destroy(p);
 }
 
 void usage()
@@ -99,6 +92,9 @@ int main(int argc, char *argv[])
 	size_t len = 0;
 	ssize_t read;
 	char username[UNAME_MAX];
+	char sendbuff[MAXBUFF];
+	int msglen;
+	int i;
 
 	if (argc != 3) {
 		printf("usage: client <hostname> <username>\n");
@@ -122,12 +118,12 @@ int main(int argc, char *argv[])
 
 	for (p = servinfo; p != NULL; p = p->ai_next) {
 		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) {
-			ERROR("client: socket");
+			perror("client: socket");
 			continue;
 		}
 
 		if (connect(sockfd, p->ai_addr, p->ai_addrlen) < 0) {
-			ERROR("client: connect");
+			perror("client: connect");
 			continue;
 		}
 		break;
@@ -154,25 +150,66 @@ int main(int argc, char *argv[])
 		while (isspace(*x ))
 			x++;
 		if (strncmp(x, "write", 5) == 0){
-			send(sockfd, x, strlen(x), 0);
+			msglen = strlen(x + 5);
+			if (msglen < MAXDATA) { /* can fit into one packet */
+				memcpy(sendbuff, "write", 5);
+				set_int(1, sendbuff + 5);
+				memcpy(sendbuff + 5 + sizeof(int), x + 5, msglen);
+				tcp_send(sockfd, sendbuff, msglen + 5 + sizeof(int));
+			} else { /* break it up into packets and send */
+				for ( i = 0; i < (msglen / MAXDATA); i++) {
+					memcpy(sendbuff, "write", 5);
+					set_int(i + 1, sendbuff + 5);
+					memcpy(sendbuff + 5 + sizeof(int), x + 5 + (MAXDATA*i), MAXDATA);
+					tcp_send(sockfd, sendbuff, MAXDATA + 5 + sizeof(int));
+				}
+				memcpy(sendbuff, "write", 5);
+				set_int(i + 1, sendbuff + 5);
+				memcpy(sendbuff + 5 + sizeof(int), x + 5 + (MAXDATA*i), msglen % MAXDATA);
+				tcp_send(sockfd, sendbuff, (msglen % MAXDATA) + 5 + sizeof(int));
+				
+			}
 		}
 		else if (strncmp(x, "put", 3) == 0) {
-			send(sockfd, x, strlen(x), 0);
-			send_file(sockfd, x + 3);
+			kill(pid, SIGKILL);
+
+			x += 3;
+			while (isspace(*x))
+				x++;
+
+			if (strlen(x) > 0) {
+				x[strlen(x) - 1] = '\0'; /* getline adds a newline, delete it */
+				do_put(x, sockfd);
+			} else {
+				printf("enter a non-empty filename\n");
+			}
+
+			if ((pid = fork()) == 0)
+				recv_loop(sockfd);
+
 		}
 		else if (strncmp(x, "list", 4) == 0) {
-			send(sockfd, x, strlen(x), 0);
+			tcp_send(sockfd, x, strlen(x));
 		}
 		else if (strncmp(x, "get", 3) == 0) {
 			kill(pid, SIGKILL);
-			send(sockfd, x, strlen(x), 0);
-			get_file(sockfd);
-			if (!(pid = fork()))
+
+			x += 3;
+			while (isspace(*x))
+				x++;
+
+			if (strlen(x) > 0) {
+				x[strlen(x) - 1] = '\0'; /* getline adds a newline, delete it */
+				do_get(x, sockfd);
+			} else {
+				printf("enter a non-empty filename\n");
+			}
+
+			if ((pid = fork()) == 0)
 				recv_loop(sockfd);
 		}
 		else
 			usage();
-		//send(sockfd, line, strlen(line), 0);
 		printf(PROMPT);
 	}
 	free(line);

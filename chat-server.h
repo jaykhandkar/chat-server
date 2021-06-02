@@ -17,38 +17,87 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
-#define UNAME_MAX 256 /*max length of an username*/
-#define MAX_USERS 20  /*max users connected to the server at a time */
+#define get_int(addr)		( ntohl(* (int *) (addr)) )
+#define set_int(val, addr)	( *( (int *) (addr) ) = htonl(val) )
 
-#if BUFSIZ < (PATH_MAX + 5)
-#undef BUFSIZ
-#define BUFSIZ (PATH_MAX + 5)
-#endif
+#define get_short(addr)		( ntohs(* (short *) (addr)) )
+#define set_short(addr, val)	( *( (short *) (addr) ) = htons(val) )
+
+#define UNAME_MAX 256      /* max length of an username*/
+
+/* op codes for tftp commands */
+
+#define  OP_RRQ		1  /* read request */
+#define  OP_WRQ		2  /* write request */
+#define  OP_DATA	3  /* data packet */
+#define  OP_ACK		4  /* acknowledgement packet */
+#define  OP_ERROR	5  /* error packet */
+
+/* tftp error codes */
+
+#define  ERR_NOTDEF	0  /* not defined */
+#define  ERR_FNF	1  /* file not found */
+#define  ERR_ACC	2  /* access violation */
+#define  ERR_FULL	3  /* disk full/allocation exceeded */
+#define  ERR_BADOP	4  /* illegal tftp operation */
+#define  ERR_BADTRANS	5  /* unknown transfer id (port) (unused)*/
+#define  ERR_BADUSR	6  /* no such user (unused) */
+
+
+#define MAXBUFF 2048       /* size of send and receive buffers */
+#define MAXDATA 512        /* maximum amount of data in a data packet */
 
 /* this is the directory where the server will store files put up by clients */
 #define SERVDIR "/home/jay/.cache/server/"
-#define DEBUG 1
 
-#define WRITE	0xa
-#define PUT	0xb 
-#define GET	0xc
-#define LIST	0xd
+#define PROMPT "💭 "
 
-#define MAGIC 0xfefefefe
+#define PORT "9071"	/* outside reserved range */
 
-#define PROMPT "🗭 "
+/* encapsulates the state of a tftp transaction */
 
-#ifdef  DEBUG
-#define ERROR(X) perror(X)
-#else
-#define ERROR(X)
-#endif
+struct tftp {
+	int lastsent;			/* amount of data in last data packet */
+	int remotefd;			/* socket descriptor of remote */
+	int localfd;			/* file that is being read from */
+	char localfname[PATH_MAX];	/* and the corresponding filename */
+	int nextblknum;			/* expected block number of next data packet */
+	int op_sent;			/* op code of last packet sent */
+	int op_recv;			/* op code of last packet received */
+	int totbytes;			/* total # of bytes sent/received so far */
+};
 
-#define PORT "9034"
+/* tcp.c */
+
+void tcp_send(int, char*, int);
+int tcp_recv(int, char *, int);
+int readn(int, char *, int);
+int writen(int, char *, int);
+
+/* sendrecv.c */
+
+void send_rq(struct tftp*, short, char *);
+int recv_rqerr(struct tftp *, char *, int);
+void send_ack(struct tftp *, short);
+int send_data(struct tftp *, short);
+int recv_data(struct tftp *, char *,  int);
+int recv_ack(struct tftp *, char *, int);
+void send_err(struct tftp *, short, char *);
+int recv_read_rq(struct tftp *, char *, int);
+int recv_write_rq(struct tftp *, char *, int);
+
+/* tftp.c */
+struct tftp *tftp_init(int);
+void tftp_destroy(struct tftp *);
+
+/* fsm.c */
+int fsm_error(struct tftp *, char *, int);
+int fsm_invalid(struct tftp *, char *, int);
+void fsm_loop(struct tftp *);
 
 void *get_ipv4_or_ipv6(struct sockaddr *);
-off_t write_to_file(int, int, off_t);
-int readn(int, char *, int);
+
+int write_to_file(int, int, int);
 
 /* structure to keep track of connected clients */
 
@@ -58,8 +107,3 @@ struct cli_fds {
 	int		maxfd;
 };
 
-struct rq {
-	unsigned int magic;
-	off_t len;
-	char filename[1024];
-};

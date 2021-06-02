@@ -31,19 +31,3 @@ off_t write_to_file (int sockfd, int fd, off_t len)
 	return tot;
 }
 
-int readn(int fd, char *ptr, int nbytes)
-{
-	int nread, nleft;
-
-	nleft = nbytes;
-	while (nleft > 0) {
-		nread = recv(fd, ptr, nleft, 0);
-		if (nread < 0)
-			return nread;
-		else if (nread == 0)
-			break;
-		nleft -= nread;
-		ptr += nread;
-	}
-	return (nbytes - nleft);
-}
