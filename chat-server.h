@@ -24,7 +24,6 @@
 #define set_short(addr, val)	( *( (short *) (addr) ) = htons(val) )
 
 #define UNAME_MAX 256      /* max length of an username*/
-#define MAX_USERS 20       /* max users connected to the server at a time */
 
 /* op codes for tftp commands */
 
@@ -53,7 +52,7 @@
 
 #define PROMPT "💭 "
 
-#define PORT "9034"
+#define PORT "9071"	/* outside reserved range */
 
 /* encapsulates the state of a tftp transaction */
 

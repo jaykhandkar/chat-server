@@ -1,5 +1,8 @@
 #include <chat-server.h>
 
+/* finite state machine table dereferenced by last opcode sent and last opcode received,
+ * yields pointer to a function to process received packet */
+
 int (*fsm_table [6][6])(struct tftp *, char *, int) = {
 #ifdef CLIENT
 	fsm_invalid,
@@ -92,13 +95,17 @@ int (*fsm_table [6][6])(struct tftp *, char *, int) = {
 
 int fsm_invalid(struct tftp *p, char *buf, int nbytes)
 {
+	printf("protocol botch\n");
 	return -1;
 }
 
 int fsm_error(struct tftp *p, char *buf, int nbytes)
 {
+	printf("fsm error\n");
 	return -1;
 }
+
+/* called by client */
 
 void fsm_loop(struct tftp *p)
 {

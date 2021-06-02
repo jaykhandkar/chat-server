@@ -169,11 +169,8 @@ int main(int argc, char *argv[])
 				tcp_send(sockfd, sendbuff, (msglen % MAXDATA) + 5 + sizeof(int));
 				
 			}
-		//	send(sockfd, x, strlen(x), 0);
 		}
 		else if (strncmp(x, "put", 3) == 0) {
-			/*send(sockfd, x, strlen(x), 0);
-			send_file(sockfd, x + 3);*/
 			kill(pid, SIGKILL);
 
 			x += 3;
@@ -196,8 +193,6 @@ int main(int argc, char *argv[])
 		}
 		else if (strncmp(x, "get", 3) == 0) {
 			kill(pid, SIGKILL);
-			/*send(sockfd, x, strlen(x), 0);
-			get_file(sockfd);*/
 
 			x += 3;
 			while (isspace(*x))
@@ -215,7 +210,6 @@ int main(int argc, char *argv[])
 		}
 		else
 			usage();
-		//send(sockfd, line, strlen(line), 0);
 		printf(PROMPT);
 	}
 	free(line);
