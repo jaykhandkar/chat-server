@@ -14,3 +14,4 @@ the host running an instance of ```server```. The following commands are support
 
 - ```list```         - displays all files on the server
 
+The file transfer functionality is implemented using (a slightly modified version of) [tftp](https://datatracker.ietf.org/doc/html/rfc1350).
