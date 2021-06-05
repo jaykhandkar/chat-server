@@ -10,6 +10,7 @@ struct tftp *tftp_init(int sockfd)
 	p->nextblknum = 0;
 	p->op_sent = 0;
 	p->op_recv = 0;
+	p->totbytes = 0;
 
 	return p;
 }

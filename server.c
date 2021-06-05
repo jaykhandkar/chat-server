@@ -87,6 +87,7 @@ void *thread_handler(void *arg)
 			p->localfd = 0;
 			p->nextblknum = 0;
 			p->lastsent = 0;
+			p->totbytes = 0;
 			continue;
 		}
 
